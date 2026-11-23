@@ -22,22 +22,22 @@ class RedditPost extends Model
         'subreddit_id',
         'reddit_id',
         'title',
-        'body',
+        'selftext',
         'author',
-        'url',
-        'permalink',
         'score',
-        'comments_count',
-        'posted_at',
-        'collected_at',
-        'is_self',
+        'num_comments',
         'upvote_ratio',
-        'raw_data',
+        'permalink',
+        'post_url',
+        'is_self',
+        'reddit_created_at',
+        'first_fetched_at',
+        'last_fetched_at',
         'qualification_status',
-        'qualified_at',
-        'comment_collection_status',
-        'comment_collection_attempts',
+        'comments_collection_status',
         'comments_collected_at',
+        'comment_collection_attempts',
+        'raw_data',
     ];
 
     /**
@@ -49,15 +49,16 @@ class RedditPost extends Model
     {
         return [
             'score' => 'integer',
-            'comments_count' => 'integer',
+            'num_comments' => 'integer',
             'is_self' => 'boolean',
             'upvote_ratio' => 'decimal:4',
             'raw_data' => 'array',
             'qualification_status' => PostQualificationStatus::class,
-            'comment_collection_status' => CommentCollectionStatus::class,
+            'comments_collection_status' => CommentCollectionStatus::class,
             'comment_collection_attempts' => 'integer',
-            'posted_at' => 'datetime',
-            'collected_at' => 'datetime',
+            'reddit_created_at' => 'datetime',
+            'first_fetched_at' => 'datetime',
+            'last_fetched_at' => 'datetime',
             'qualified_at' => 'datetime',
             'comments_collected_at' => 'datetime',
         ];
@@ -76,15 +77,7 @@ class RedditPost extends Model
      */
     public function comments(): HasMany
     {
-        return $this->hasMany(RedditComment::class, 'reddit_post_id');
-    }
-
-    /**
-     * @return HasMany<PainPoint, $this>
-     */
-    public function painPoints(): HasMany
-    {
-        return $this->hasMany(PainPoint::class);
+        return $this->hasMany(RedditComment::class, 'post_id');
     }
 
     /**
@@ -93,5 +86,13 @@ class RedditPost extends Model
     public function aiAnalyses(): HasMany
     {
         return $this->hasMany(AiAnalysis::class);
+    }
+
+    /**
+     * @return HasMany<PainPoint, $this>
+     */
+    public function painPoints(): HasMany
+    {
+        return $this->hasMany(PainPoint::class);
     }
 }

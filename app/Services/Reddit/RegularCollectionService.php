@@ -76,9 +76,19 @@ class RegularCollectionService
 
             if ($maxCommentPosts > 0) {
                 $commentPosts = RedditPost::query()
+                    ->with('subreddit:id,name')
+                    ->select([
+                        'id',
+                        'subreddit_id',
+                        'reddit_id',
+                        'permalink',
+                        'score',
+                        'comments_collection_status',
+                        'comment_collection_attempts',
+                    ])
                     ->where('subreddit_id', $subreddit->getKey())
                     ->where('qualification_status', PostQualificationStatus::Qualified->value)
-                    ->whereIn('comment_collection_status', [
+                    ->whereIn('comments_collection_status', [
                         CommentCollectionStatus::Pending->value,
                         CommentCollectionStatus::Failed->value,
                         CommentCollectionStatus::Running->value,

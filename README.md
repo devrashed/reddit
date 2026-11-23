@@ -1,7 +1,8 @@
 # Reddit Business Lab
 
 A Reddit-powered business idea and pain point discovery tool. The application includes the Phase 1
-foundation, Phase 2 subreddit management, and the Phase 3 Reddit collection engine.
+foundation, Phase 2 subreddit management, the Phase 3 Reddit collection engine, and the Phase 4
+canonical post/comment data model.
 
 ## Stack
 
@@ -109,6 +110,29 @@ php artisan reddit:dispatch-initial-collection --include-failed
 php artisan reddit:dispatch-regular-collection --force
 ```
 
+## Reddit Data Model
+
+`reddit_posts` stores one row per Reddit post with a unique `reddit_id`:
+
+- Content: `title`, `selftext`, `author`, `permalink`, `post_url`, `is_self`
+- Metrics: `score`, `num_comments`, `upvote_ratio`
+- Timestamps: `reddit_created_at`, `first_fetched_at`, `last_fetched_at`
+- Processing state: `qualification_status`, `comments_collection_status`, `comments_collected_at`
+- Raw Reddit payload in `raw_data`
+
+`reddit_comments` stores one row per accessible comment:
+
+- `post_id` foreign key, unique `reddit_comment_id`, `parent_id`, `author`, `body`, `score`
+- `reddit_created_at`, `fetched_at`, plus optional `link_id` and `raw_data`
+
+Indexes cover subreddit/creation lookups, score, comment counts, qualification status, comment post
+lookups, and parent comment lookups. Post and comment syncs use upserts inside database transactions.
+`first_fetched_at` is preserved on updates while `last_fetched_at` is refreshed. Missing content is not
+deleted merely because it disappears from a later listing.
+
+AI analysis state remains in `ai_analyses`; it is not stored on `reddit_posts` and is separate from
+qualification and comment collection state.
+
 ## Administrator
 
 The administrator account is provisioned by `AdminUserSeeder` from the `ADMIN_NAME`, `ADMIN_EMAIL`, and
@@ -169,7 +193,11 @@ Phase 3: public JSON collection engine, initial historical collection, scheduled
 post metric upserts, qualification rules, comment retrieval, collection logs, configurable collection
 settings, queue jobs, scheduler, retries, and per-subreddit locks.
 
-Deferred: DeepSeek integration, pain point extraction, business idea generation, and scoring.
+Phase 4: canonical `reddit_posts` and `reddit_comments` schemas, first/last fetch timestamps,
+transactional upserts, relationship integrity, AI-analysis separation, indexing, and batch-safe data
+access.
+
+Deferred: Dashboard, DeepSeek integration, pain point extraction, business idea generation, and scoring.
 
 ## Collection Limitations
 

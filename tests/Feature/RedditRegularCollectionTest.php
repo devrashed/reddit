@@ -37,15 +37,15 @@ class RedditRegularCollectionTest extends TestCase
             'subreddit_id' => $subreddit->getKey(),
             'reddit_id' => 'a1',
             'title' => 'Original title',
-            'body' => 'Body a1',
+            'selftext' => 'Body a1',
             'author' => 'author_a1',
             'score' => 4,
-            'comments_count' => 1,
+            'num_comments' => 1,
             'permalink' => '/r/SaaS/comments/a1/post_a1/',
-            'posted_at' => now()->subDays(2),
-            'collected_at' => now()->subDay(),
+            'reddit_created_at' => now()->subDays(2),
+            'last_fetched_at' => now()->subDay(),
             'qualification_status' => PostQualificationStatus::Qualified,
-            'comment_collection_status' => CommentCollectionStatus::Completed,
+            'comments_collection_status' => CommentCollectionStatus::Completed,
         ]);
 
         $listing = $this->listingResponse([
@@ -85,24 +85,24 @@ class RedditRegularCollectionTest extends TestCase
         $existing->refresh();
         $this->assertSame('Updated title', $existing->title);
         $this->assertSame(25, $existing->score);
-        $this->assertSame(6, $existing->comments_count);
+        $this->assertSame(6, $existing->num_comments);
         $this->assertSame(PostQualificationStatus::Qualified, $existing->qualification_status);
-        $this->assertSame(CommentCollectionStatus::Completed, $existing->comment_collection_status);
+        $this->assertSame(CommentCollectionStatus::Completed, $existing->comments_collection_status);
 
         $qualified = RedditPost::query()->where('reddit_id', 'b1')->sole();
         $rejected = RedditPost::query()->where('reddit_id', 'c1')->sole();
 
         $this->assertSame(PostQualificationStatus::Qualified, $qualified->qualification_status);
-        $this->assertSame(CommentCollectionStatus::Completed, $qualified->comment_collection_status);
+        $this->assertSame(CommentCollectionStatus::Completed, $qualified->comments_collection_status);
         $this->assertSame(1, $qualified->comment_collection_attempts);
         $this->assertNotNull($qualified->comments_collected_at);
         $this->assertSame(PostQualificationStatus::Rejected, $rejected->qualification_status);
-        $this->assertSame(CommentCollectionStatus::Pending, $rejected->comment_collection_status);
+        $this->assertSame(CommentCollectionStatus::Pending, $rejected->comments_collection_status);
 
         $nestedComment = RedditComment::query()->where('reddit_comment_id', 'c2')->sole();
-        $this->assertSame('t1_c1', $nestedComment->parent_reddit_id);
+        $this->assertSame('t1_c1', $nestedComment->parent_id);
         $this->assertSame('Nested reply', $nestedComment->body);
-        $this->assertSame($qualified->getKey(), $nestedComment->reddit_post_id);
+        $this->assertSame($qualified->getKey(), $nestedComment->post_id);
         $this->assertDatabaseHas('reddit_comments', ['reddit_comment_id' => 'c3', 'body' => 'Expanded comment']);
 
         $log = CollectionLog::query()->where('collection_type', CollectionLog::TYPE_REGULAR)->sole();
@@ -126,11 +126,11 @@ class RedditRegularCollectionTest extends TestCase
             'reddit_id' => 'a1',
             'title' => 'Existing post',
             'score' => 1,
-            'comments_count' => 1,
+            'num_comments' => 1,
             'permalink' => '/r/SaaS/comments/a1/post_a1/',
-            'posted_at' => now()->subDay(),
+            'reddit_created_at' => now()->subDay(),
             'qualification_status' => PostQualificationStatus::Qualified,
-            'comment_collection_status' => CommentCollectionStatus::Completed,
+            'comments_collection_status' => CommentCollectionStatus::Completed,
         ]);
 
         Http::fake([
@@ -177,11 +177,11 @@ class RedditRegularCollectionTest extends TestCase
             'reddit_id' => 'b1',
             'title' => 'Needs comments',
             'score' => 4,
-            'comments_count' => 3,
+            'num_comments' => 3,
             'permalink' => '/r/SaaS/comments/b1/post_b1/',
-            'posted_at' => now()->subDay(),
+            'reddit_created_at' => now()->subDay(),
             'qualification_status' => PostQualificationStatus::Qualified,
-            'comment_collection_status' => CommentCollectionStatus::Pending,
+            'comments_collection_status' => CommentCollectionStatus::Pending,
         ]);
 
         $successfulComments = $this->commentsResponse([
@@ -199,7 +199,7 @@ class RedditRegularCollectionTest extends TestCase
 
         $post->refresh();
 
-        $this->assertSame(CommentCollectionStatus::Failed, $post->comment_collection_status);
+        $this->assertSame(CommentCollectionStatus::Failed, $post->comments_collection_status);
         $this->assertSame(1, $post->comment_collection_attempts);
         $this->assertDatabaseCount('reddit_comments', 0);
 
@@ -211,7 +211,7 @@ class RedditRegularCollectionTest extends TestCase
 
         $post->refresh();
 
-        $this->assertSame(CommentCollectionStatus::Completed, $post->comment_collection_status);
+        $this->assertSame(CommentCollectionStatus::Completed, $post->comments_collection_status);
         $this->assertSame(2, $post->comment_collection_attempts);
         $this->assertDatabaseHas('reddit_comments', ['reddit_comment_id' => 'r1']);
         $this->assertSame(2, CollectionLog::query()->where('collection_type', CollectionLog::TYPE_REGULAR)->count());

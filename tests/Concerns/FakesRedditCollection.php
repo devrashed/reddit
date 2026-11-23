@@ -55,6 +55,15 @@ trait FakesRedditCollection
 
     /**
      * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function postChild(string $id, array $overrides = []): array
+    {
+        return ['kind' => 't3', 'data' => $this->postData($id, $overrides)];
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
      * @param  list<array<string, mixed>>  $replies
      * @return array<string, mixed>
      */

@@ -16,16 +16,16 @@ class RedditComment extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'reddit_post_id',
+        'post_id',
         'reddit_comment_id',
-        'parent_reddit_id',
+        'parent_id',
         'author',
         'body',
         'score',
         'link_id',
-        'created_utc',
+        'reddit_created_at',
         'raw_data',
-        'collected_at',
+        'fetched_at',
     ];
 
     /**
@@ -38,8 +38,8 @@ class RedditComment extends Model
         return [
             'score' => 'integer',
             'raw_data' => 'array',
-            'created_utc' => 'datetime',
-            'collected_at' => 'datetime',
+            'reddit_created_at' => 'datetime',
+            'fetched_at' => 'datetime',
         ];
     }
 
@@ -48,6 +48,6 @@ class RedditComment extends Model
      */
     public function redditPost(): BelongsTo
     {
-        return $this->belongsTo(RedditPost::class);
+        return $this->belongsTo(RedditPost::class, 'post_id');
     }
 }

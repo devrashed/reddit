@@ -5,6 +5,7 @@ namespace App\Services\Reddit;
 use App\Enums\CommentCollectionStatus;
 use App\Models\RedditComment;
 use App\Models\RedditPost;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class CommentCollectionService
@@ -22,7 +23,7 @@ class CommentCollectionService
     public function collect(RedditPost $post): array
     {
         $post->forceFill([
-            'comment_collection_status' => CommentCollectionStatus::Running->value,
+            'comments_collection_status' => CommentCollectionStatus::Running->value,
             'comment_collection_attempts' => $post->comment_collection_attempts + 1,
         ])->save();
 
@@ -97,7 +98,7 @@ class CommentCollectionService
             $fetched = $this->upsertComments($post, array_values($comments));
 
             $post->forceFill([
-                'comment_collection_status' => CommentCollectionStatus::Completed->value,
+                'comments_collection_status' => CommentCollectionStatus::Completed->value,
                 'comments_collected_at' => now(),
             ])->save();
 
@@ -107,7 +108,7 @@ class CommentCollectionService
             ];
         } catch (Throwable $exception) {
             $post->forceFill([
-                'comment_collection_status' => CommentCollectionStatus::Failed->value,
+                'comments_collection_status' => CommentCollectionStatus::Failed->value,
             ])->save();
 
             throw $exception;
@@ -123,40 +124,42 @@ class CommentCollectionService
             return 0;
         }
 
-        $collectedAt = now()->format('Y-m-d H:i:s');
+        $fetchedAt = now()->format('Y-m-d H:i:s');
         $rows = [];
 
         foreach ($comments as $comment) {
             $rows[] = [
-                'reddit_post_id' => $post->getKey(),
+                'post_id' => $post->getKey(),
                 'reddit_comment_id' => $comment['reddit_comment_id'],
-                'parent_reddit_id' => $comment['parent_reddit_id'],
+                'parent_id' => $comment['parent_id'],
                 'author' => $comment['author'],
                 'body' => $comment['body'],
                 'score' => (int) $comment['score'],
                 'link_id' => $comment['link_id'],
-                'created_utc' => $comment['created_utc']?->format('Y-m-d H:i:s'),
+                'reddit_created_at' => $comment['reddit_created_at']?->format('Y-m-d H:i:s'),
                 'raw_data' => $this->encodeJson($comment['raw_data']),
-                'collected_at' => $collectedAt,
+                'fetched_at' => $fetchedAt,
             ];
         }
 
-        foreach (array_chunk($rows, 200) as $chunk) {
-            RedditComment::query()->upsert(
-                $chunk,
-                ['reddit_comment_id'],
-                [
-                    'parent_reddit_id',
-                    'author',
-                    'body',
-                    'score',
-                    'link_id',
-                    'created_utc',
-                    'raw_data',
-                    'collected_at',
-                ]
-            );
-        }
+        DB::transaction(function () use ($rows): void {
+            foreach (array_chunk($rows, 200) as $chunk) {
+                RedditComment::query()->upsert(
+                    $chunk,
+                    ['reddit_comment_id'],
+                    [
+                        'parent_id',
+                        'author',
+                        'body',
+                        'score',
+                        'link_id',
+                        'reddit_created_at',
+                        'raw_data',
+                        'fetched_at',
+                    ]
+                );
+            }
+        });
 
         return count($rows);
     }

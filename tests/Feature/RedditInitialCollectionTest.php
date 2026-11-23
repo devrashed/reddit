@@ -74,13 +74,17 @@ class RedditInitialCollectionTest extends TestCase
         $post = RedditPost::query()->where('reddit_id', 'a1')->sole();
 
         $this->assertSame('Post a1', $post->title);
-        $this->assertSame('Body a1', $post->body);
+        $this->assertSame('Body a1', $post->selftext);
         $this->assertSame('author_a1', $post->author);
         $this->assertSame(5, $post->score);
-        $this->assertSame(3, $post->comments_count);
+        $this->assertSame(3, $post->num_comments);
         $this->assertSame('/r/SaaS/comments/a1/post_a1/', $post->permalink);
         $this->assertTrue($post->is_self);
         $this->assertEqualsWithDelta(0.92, (float) $post->upvote_ratio, 0.0001);
+        $this->assertSame('https://www.reddit.com/r/SaaS/comments/a1/post_a1/', $post->post_url);
+        $this->assertNotNull($post->reddit_created_at);
+        $this->assertNotNull($post->first_fetched_at);
+        $this->assertNotNull($post->last_fetched_at);
         $this->assertSame('a1', $post->raw_data['id']);
 
         $log = CollectionLog::query()->where('collection_type', CollectionLog::TYPE_INITIAL)->sole();

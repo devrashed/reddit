@@ -6,6 +6,7 @@ use App\Models\RedditPost;
 use App\Models\Subreddit;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\DB;
 
 class RedditPostSyncService
 {
@@ -17,14 +18,14 @@ class RedditPostSyncService
      */
     private const UPDATE_COLUMNS = [
         'title',
-        'body',
+        'selftext',
         'author',
-        'url',
+        'post_url',
         'permalink',
         'score',
-        'comments_count',
-        'posted_at',
-        'collected_at',
+        'num_comments',
+        'reddit_created_at',
+        'last_fetched_at',
         'is_self',
         'upvote_ratio',
         'raw_data',
@@ -42,7 +43,7 @@ class RedditPostSyncService
         $skipped = 0;
         $oldest = null;
         $rows = [];
-        $collectedAt = now()->format('Y-m-d H:i:s');
+        $fetchedAt = now()->format('Y-m-d H:i:s');
 
         foreach ($children as $child) {
             if (($child['kind'] ?? null) !== 't3' || ! is_array($child['data'] ?? null)) {
@@ -83,14 +84,15 @@ class RedditPostSyncService
                 'subreddit_id' => $subreddit->getKey(),
                 'reddit_id' => $redditId,
                 'title' => $title,
-                'body' => isset($data['selftext']) ? (string) $data['selftext'] : null,
+                'selftext' => isset($data['selftext']) ? (string) $data['selftext'] : null,
                 'author' => isset($data['author']) ? (string) $data['author'] : null,
-                'url' => filled($data['url'] ?? null) ? (string) $data['url'] : null,
+                'post_url' => filled($data['url'] ?? null) ? (string) $data['url'] : null,
                 'permalink' => filled($data['permalink'] ?? null) ? (string) $data['permalink'] : null,
                 'score' => (int) ($data['score'] ?? 0),
-                'comments_count' => (int) ($data['num_comments'] ?? 0),
-                'posted_at' => $createdAt->format('Y-m-d H:i:s'),
-                'collected_at' => $collectedAt,
+                'num_comments' => (int) ($data['num_comments'] ?? 0),
+                'reddit_created_at' => $createdAt->format('Y-m-d H:i:s'),
+                'first_fetched_at' => $fetchedAt,
+                'last_fetched_at' => $fetchedAt,
                 'is_self' => (bool) ($data['is_self'] ?? false),
                 'upvote_ratio' => $upvoteRatio,
                 'raw_data' => $this->encodeJson($data),
@@ -113,9 +115,11 @@ class RedditPostSyncService
             ->pluck('reddit_id')
             ->all();
 
-        foreach (array_chunk(array_values($rows), 200) as $chunk) {
-            RedditPost::query()->upsert($chunk, ['reddit_id'], self::UPDATE_COLUMNS);
-        }
+        DB::transaction(function () use ($rows): void {
+            foreach (array_chunk(array_values($rows), 200) as $chunk) {
+                RedditPost::query()->upsert($chunk, ['reddit_id'], self::UPDATE_COLUMNS);
+            }
+        });
 
         return [
             'fetched' => $fetched,

@@ -25,7 +25,7 @@ class PostQualificationService
             ->where('subreddit_id', $subreddit->getKey())
             ->where('qualification_status', '!=', PostQualificationStatus::Qualified->value)
             ->where('score', '>=', $minScore)
-            ->where('comments_count', '>=', $minComments)
+            ->where('num_comments', '>=', $minComments)
             ->update([
                 'qualification_status' => PostQualificationStatus::Qualified->value,
                 'qualified_at' => now(),

@@ -148,12 +148,12 @@ class RedditCommentParser
 
         return [
             'reddit_comment_id' => $commentId,
-            'parent_reddit_id' => isset($data['parent_id']) ? (string) $data['parent_id'] : null,
+            'parent_id' => isset($data['parent_id']) ? (string) $data['parent_id'] : null,
             'author' => isset($data['author']) ? (string) $data['author'] : null,
             'body' => isset($data['body']) ? (string) $data['body'] : null,
             'score' => (int) ($data['score'] ?? 0),
             'link_id' => isset($data['link_id']) ? (string) $data['link_id'] : null,
-            'created_utc' => $createdUtc,
+            'reddit_created_at' => $createdUtc,
             'raw_data' => $data,
         ];
     }
