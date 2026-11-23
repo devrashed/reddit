@@ -94,10 +94,14 @@ routes/web.php               Authentication and admin routes
 tests/                       Feature tests
 ```
 
-## Phase 1 Scope
+## Implemented Scope
 
-Implemented: authentication, administrator access control, database schema, admin layout, navigation,
+Phase 1: authentication, administrator access control, database schema, admin layout, navigation,
 reusable UI components, AJAX health status, and placeholder screens for the discovery modules.
+
+Phase 2: complete subreddit management with search, status filtering, pagination, activate/pause actions,
+AJAX deletion with confirmation, duplicate prevention, generated Reddit JSON URLs, and a pending initial
+collection state for each new community.
 
 Deferred to later phases: Reddit collection, DeepSeek integration, pain point extraction, business idea
 generation, scoring, and settings management.

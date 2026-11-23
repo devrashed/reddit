@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\SubredditStatus;
 use App\Http\Controllers\Controller;
 use App\Models\BusinessIdea;
 use App\Models\CollectionLog;
@@ -41,7 +42,7 @@ class DashboardController extends Controller
             ],
             [
                 'label' => 'Active Subreddits',
-                'value' => Subreddit::where('is_active', true)->count(),
+                'value' => Subreddit::where('status', SubredditStatus::Active->value)->count(),
                 'icon' => 'bi-collection',
                 'tone' => 'success',
                 'route' => 'admin.subreddits.index',
