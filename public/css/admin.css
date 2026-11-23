@@ -768,6 +768,10 @@ a {
     min-width: 960px;
 }
 
+.collection-log-table {
+    min-width: 940px;
+}
+
 .subreddit-url {
     display: inline-block;
     max-width: 260px;
@@ -802,6 +806,11 @@ a {
 
 .toast-container {
     z-index: 2050;
+}
+
+.settings-command {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 575.98px) {

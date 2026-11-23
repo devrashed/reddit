@@ -10,6 +10,16 @@ class CollectionLog extends Model
 {
     use HasFactory;
 
+    public const TYPE_INITIAL = 'initial';
+
+    public const TYPE_REGULAR = 'regular';
+
+    public const STATUS_RUNNING = 'running';
+
+    public const STATUS_COMPLETED = 'completed';
+
+    public const STATUS_FAILED = 'failed';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -17,10 +27,15 @@ class CollectionLog extends Model
      */
     protected $fillable = [
         'subreddit_id',
+        'collection_type',
         'status',
         'posts_fetched',
         'posts_created',
+        'posts_updated',
+        'qualified_posts',
+        'comments_fetched',
         'error_message',
+        'notes',
         'started_at',
         'finished_at',
     ];
@@ -35,6 +50,9 @@ class CollectionLog extends Model
         return [
             'posts_fetched' => 'integer',
             'posts_created' => 'integer',
+            'posts_updated' => 'integer',
+            'qualified_posts' => 'integer',
+            'comments_fetched' => 'integer',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];

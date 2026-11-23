@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Enums\InitialCollectionStatus;
 use App\Enums\SubredditStatus;
+use App\Jobs\RunInitialSubredditCollection;
 use App\Models\RedditPost;
 use App\Models\Subreddit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\Concerns\InteractsWithAdmins;
 use Tests\TestCase;
 
@@ -15,6 +17,13 @@ class SubredditManagementTest extends TestCase
 {
     use InteractsWithAdmins;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Queue::fake();
+    }
 
     public function test_guests_are_redirected_from_subreddit_management(): void
     {
@@ -80,6 +89,11 @@ class SubredditManagementTest extends TestCase
         $this->assertNull($subreddit->initial_collection_started_at);
         $this->assertNull($subreddit->initial_collection_completed_at);
         $this->assertNull($subreddit->last_collected_at);
+
+        Queue::assertPushed(
+            RunInitialSubredditCollection::class,
+            fn (RunInitialSubredditCollection $job): bool => $job->subredditId === $subreddit->getKey()
+        );
     }
 
     public function test_subreddit_names_are_normalized_from_pasted_reddit_urls(): void

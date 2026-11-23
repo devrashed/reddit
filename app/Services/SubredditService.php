@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InitialCollectionStatus;
 use App\Enums\SubredditStatus;
+use App\Jobs\RunInitialSubredditCollection;
 use App\Models\Subreddit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -61,6 +62,8 @@ class SubredditService
         $subreddit->initial_collection_status = InitialCollectionStatus::Pending;
 
         $this->persist($subreddit);
+
+        RunInitialSubredditCollection::dispatch($subreddit->getKey())->afterCommit();
 
         return $subreddit;
     }

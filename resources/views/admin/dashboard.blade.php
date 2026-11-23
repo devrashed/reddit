@@ -80,7 +80,7 @@
             <div class="card mb-3">
                 <div class="card-heading">
                     <h2>System information</h2>
-                    <span class="badge text-bg-light border">Phase 2</span>
+                    <span class="badge text-bg-light border">Phase 3</span>
                 </div>
                 <div class="card-body">
                     <dl class="system-list row mb-0">
@@ -127,8 +127,8 @@
     <div class="alert alert-info admin-alert d-flex gap-2 mt-4" role="alert">
         <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
         <div>
-            <strong>Subreddit management is live.</strong>
-            Reddit collection, DeepSeek analysis, and idea scoring will be delivered in later phases.
+            <strong>The Reddit collection engine is active.</strong>
+            DeepSeek analysis, pain point extraction, and idea scoring will be delivered in later phases.
         </div>
     </div>
 </x-layouts.admin>

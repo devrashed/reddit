@@ -45,6 +45,7 @@ Route::middleware(['auth', 'admin'])
         Route::get('ai-analysis', [AiAnalysisController::class, 'index'])->name('ai-analysis.index');
         Route::get('collection-logs', [CollectionLogController::class, 'index'])->name('collection-logs.index');
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
 
         Route::get('system/status', SystemStatusController::class)->name('system.status');
     });

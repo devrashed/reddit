@@ -3,7 +3,7 @@
 
     <x-placeholder-page
         icon="bi-file-earmark-text"
-        title="Reddit post collection is not active yet"
-        description="Fetched submissions, scores, comment counts, and source subreddits will be listed here with search, filters, and pagination once collection is enabled."
+        title="Post browsing arrives in a later phase"
+        description="The collection engine is active and stores fetched submissions with their metrics. A searchable post browser will be added in a later phase."
     />
 </x-layouts.admin>

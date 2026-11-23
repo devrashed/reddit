@@ -339,6 +339,33 @@
 
     /*
      |--------------------------------------------------------------------------
+     | Scheduled collection time fields
+     |--------------------------------------------------------------------------
+     */
+    var frequencySelect = document.getElementById("regular_frequency");
+    var collectionTimeFields = document.querySelectorAll("[data-collection-time-field]");
+
+    if (frequencySelect && collectionTimeFields.length > 0) {
+        var syncCollectionTimeFields = function () {
+            var count = parseInt(frequencySelect.value, 10) || 0;
+
+            collectionTimeFields.forEach(function (field) {
+                var visible = parseInt(field.dataset.index, 10) < count;
+
+                field.classList.toggle("d-none", !visible);
+                field.querySelectorAll("input").forEach(function (input) {
+                    input.disabled = !visible;
+                    input.required = visible;
+                });
+            });
+        };
+
+        frequencySelect.addEventListener("change", syncCollectionTimeFields);
+        syncCollectionTimeFields();
+    }
+
+    /*
+     |--------------------------------------------------------------------------
      | System status (AJAX)
      |--------------------------------------------------------------------------
      */

@@ -37,6 +37,8 @@ class Subreddit extends Model
             'status' => SubredditStatus::class,
             'initial_collection_status' => InitialCollectionStatus::class,
             'subscribers_count' => 'integer',
+            'initial_collection_pages' => 'integer',
+            'initial_collection_posts_fetched' => 'integer',
             'initial_collection_started_at' => 'datetime',
             'initial_collection_completed_at' => 'datetime',
             'last_collected_at' => 'datetime',
@@ -62,6 +64,11 @@ class Subreddit extends Model
     public static function urlForName(string $name): string
     {
         return 'https://www.reddit.com/r/'.rawurlencode($name).'.json';
+    }
+
+    public function hasCompletedInitialCollection(): bool
+    {
+        return $this->initial_collection_status === InitialCollectionStatus::Completed;
     }
 
     /**

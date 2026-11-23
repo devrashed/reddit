@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\CommentCollectionStatus;
+use App\Enums\PostQualificationStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +30,14 @@ class RedditPost extends Model
         'comments_count',
         'posted_at',
         'collected_at',
+        'is_self',
+        'upvote_ratio',
+        'raw_data',
+        'qualification_status',
+        'qualified_at',
+        'comment_collection_status',
+        'comment_collection_attempts',
+        'comments_collected_at',
     ];
 
     /**
@@ -40,8 +50,16 @@ class RedditPost extends Model
         return [
             'score' => 'integer',
             'comments_count' => 'integer',
+            'is_self' => 'boolean',
+            'upvote_ratio' => 'decimal:4',
+            'raw_data' => 'array',
+            'qualification_status' => PostQualificationStatus::class,
+            'comment_collection_status' => CommentCollectionStatus::class,
+            'comment_collection_attempts' => 'integer',
             'posted_at' => 'datetime',
             'collected_at' => 'datetime',
+            'qualified_at' => 'datetime',
+            'comments_collected_at' => 'datetime',
         ];
     }
 
@@ -51,6 +69,14 @@ class RedditPost extends Model
     public function subreddit(): BelongsTo
     {
         return $this->belongsTo(Subreddit::class);
+    }
+
+    /**
+     * @return HasMany<RedditComment, $this>
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(RedditComment::class, 'reddit_post_id');
     }
 
     /**
