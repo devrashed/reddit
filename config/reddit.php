@@ -47,9 +47,13 @@ return [
     'comments_max_depth' => 20,
 
     'qualification' => [
-        'min_score' => (int) env('REDDIT_MIN_POST_SCORE', 1),
-        'min_comments' => (int) env('REDDIT_MIN_POST_COMMENTS', 1),
+        'min_score' => 5,
+        'min_comments' => 5,
     ],
+
+    'pending_recheck_max_posts' => (int) env('REDDIT_PENDING_RECHECK_MAX_POSTS', 300),
+
+    'pending_recheck_batch_size' => (int) env('REDDIT_PENDING_RECHECK_BATCH_SIZE', 100),
 
     'defaults' => [
         'regular_enabled' => true,

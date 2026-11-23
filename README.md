@@ -1,8 +1,8 @@
 # Reddit Business Lab
 
 A Reddit-powered business idea and pain point discovery tool. The application includes the Phase 1
-foundation, Phase 2 subreddit management, the Phase 3 Reddit collection engine, and the Phase 4
-canonical post/comment data model.
+foundation, Phase 2 subreddit management, the Phase 3 collection engine, the Phase 4 canonical data
+model, and the Phase 5 qualification and comment automation workflow.
 
 ## Stack
 
@@ -95,12 +95,20 @@ Restart queue workers after changing `.env` or deploying code.
 - Initial collection follows Reddit `data.after` pagination, filters posts to the configured historical
   window, and stops at the cutoff, end of listing, or a safety page cap.
 - Initial progress and cursor are persisted so a failed attempt can resume safely.
+- A post qualifies only when **both** `score >= 5` and `num_comments >= 5`. Low-engagement posts are
+  stored but remain `pending` for later rechecks.
 - Regular collection runs at the configured times (default `08:00`, `14:00`, `20:00` in `Asia/Dhaka`).
-- Regular collection updates metrics, rechecks qualification, selects qualified posts, and fetches
-  accessible comments, including nested replies and bounded `more` expansion attempts.
-- Per-subreddit cache locks prevent concurrent initial and regular collection.
+- Regular collection updates recent metrics, qualifies newly eligible posts, and refreshes a bounded
+  batch of older pending posts through Reddit's public info endpoint.
+- Qualified posts are dispatched to deduplicated comment collection jobs with per-post locks.
+- Comment and qualification states are independent; AI analysis remains in `ai_analyses`.
 - Collection limitations and failures are recorded in the database and visible under Collection Logs.
 - No DeepSeek or AI analysis is called in this phase.
+
+Qualification thresholds are fixed at `score >= 5` and `num_comments >= 5` in `config/reddit.php`.
+Pending rechecks are bounded by `REDDIT_PENDING_RECHECK_MAX_POSTS` (default 300) and
+`REDDIT_PENDING_RECHECK_BATCH_SIZE` (default 100). Comment jobs are unique per post and protected by a
+per-post cache lock.
 
 Recovery commands:
 
@@ -117,7 +125,7 @@ php artisan reddit:dispatch-regular-collection --force
 - Content: `title`, `selftext`, `author`, `permalink`, `post_url`, `is_self`
 - Metrics: `score`, `num_comments`, `upvote_ratio`
 - Timestamps: `reddit_created_at`, `first_fetched_at`, `last_fetched_at`
-- Processing state: `qualification_status`, `comments_collection_status`, `comments_collected_at`
+- Processing state: `qualification_status` (`pending`/`qualified`), `comments_collection_status`, `comments_collected_at`, `pending_rechecked_at`
 - Raw Reddit payload in `raw_data`
 
 `reddit_comments` stores one row per accessible comment:
@@ -131,7 +139,9 @@ lookups, and parent comment lookups. Post and comment syncs use upserts inside d
 deleted merely because it disappears from a later listing.
 
 AI analysis state remains in `ai_analyses`; it is not stored on `reddit_posts` and is separate from
-qualification and comment collection state.
+qualification and comment collection state. Collection logs distinguish initial, regular, and comments
+runs; regular logs record pending checks, newly qualified posts, and failed operations, while comment
+jobs record accessible comments fetched.
 
 ## Administrator
 
@@ -162,7 +172,7 @@ app/
   Http/
     Controllers/Admin/       Admin pages
     Requests/Admin/          Form validation
-  Jobs/                      Initial and regular collection jobs
+  Jobs/                      Initial, regular, and per-post comment collection jobs
   Models/                    Eloquent models and relationships
   Services/Reddit/           HTTP client, collection, parsing, logging, settings
 config/
@@ -196,6 +206,10 @@ settings, queue jobs, scheduler, retries, and per-subreddit locks.
 Phase 4: canonical `reddit_posts` and `reddit_comments` schemas, first/last fetch timestamps,
 transactional upserts, relationship integrity, AI-analysis separation, indexing, and batch-safe data
 access.
+
+Phase 5: strict dual-threshold qualification (`score >= 5` AND `num_comments >= 5`), pending-only status,
+batched pending-post rechecks, deduplicated queued comment collection, per-post locks, separate comment
+logs, failed-operation tracking, and AI-free automation.
 
 Deferred: Dashboard, DeepSeek integration, pain point extraction, business idea generation, and scoring.
 

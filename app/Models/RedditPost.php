@@ -37,6 +37,7 @@ class RedditPost extends Model
         'comments_collection_status',
         'comments_collected_at',
         'comment_collection_attempts',
+        'pending_rechecked_at',
         'raw_data',
     ];
 
@@ -61,6 +62,7 @@ class RedditPost extends Model
             'last_fetched_at' => 'datetime',
             'qualified_at' => 'datetime',
             'comments_collected_at' => 'datetime',
+            'pending_rechecked_at' => 'datetime',
         ];
     }
 

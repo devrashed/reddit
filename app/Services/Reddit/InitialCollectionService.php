@@ -13,6 +13,8 @@ class InitialCollectionService
     public function __construct(
         private readonly RedditApiClient $client,
         private readonly RedditPostSyncService $posts,
+        private readonly PostQualificationService $qualification,
+        private readonly QualifiedCommentDispatcher $commentDispatcher,
         private readonly CollectionLogService $logs,
         private readonly RedditSettings $settings
     ) {}
@@ -30,7 +32,16 @@ class InitialCollectionService
         $log = $this->logs->start($subreddit, CollectionLog::TYPE_INITIAL);
 
         $months = $this->settings->historicalMonths();
-        $counts = ['fetched' => 0, 'created' => 0, 'updated' => 0, 'qualified' => 0, 'comments' => 0];
+        $counts = [
+            'fetched' => 0,
+            'created' => 0,
+            'updated' => 0,
+            'qualified' => 0,
+            'pending_checked' => 0,
+            'newly_qualified' => 0,
+            'comments' => 0,
+            'failed' => 0,
+        ];
         $notes = [];
         $skipped = 0;
 
@@ -112,6 +123,17 @@ class InitialCollectionService
                 $notes[] = "{$skipped} post(s) older than the {$months}-month cutoff were skipped.";
             }
 
+            $newlyQualified = $this->qualification->qualify($subreddit);
+            $counts['qualified'] = $newlyQualified;
+            $counts['newly_qualified'] = $newlyQualified;
+
+            $maxCommentPosts = max(0, (int) config('reddit.comments_max_posts_per_run', 10));
+            $queued = $this->commentDispatcher->dispatchFor($subreddit, $maxCommentPosts);
+
+            if ($queued > 0) {
+                $notes[] = "Queued {$queued} comment collection job(s).";
+            }
+
             $subreddit->forceFill([
                 'initial_collection_status' => InitialCollectionStatus::Completed->value,
                 'initial_collection_completed_at' => now(),
@@ -123,6 +145,8 @@ class InitialCollectionService
             $subreddit->forceFill([
                 'initial_collection_status' => InitialCollectionStatus::Failed->value,
             ])->save();
+
+            $counts['failed'] = 1;
 
             $this->logs->fail($log, $exception, $counts, $notes);
 

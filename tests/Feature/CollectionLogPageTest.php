@@ -26,7 +26,10 @@ class CollectionLogPageTest extends TestCase
             'posts_created' => 18,
             'posts_updated' => 2,
             'qualified_posts' => 4,
+            'pending_posts_checked' => 12,
+            'newly_qualified_posts' => 4,
             'comments_fetched' => 30,
+            'failed_operations' => 1,
             'started_at' => now()->subMinutes(2),
             'finished_at' => now(),
             'notes' => 'Pagination stopped at the configured 2-month cutoff.',
@@ -38,6 +41,8 @@ class CollectionLogPageTest extends TestCase
             ->assertSee('r/SaaS')
             ->assertSee('Initial')
             ->assertSee('Completed')
+            ->assertSee('Pending checked: 12')
+            ->assertSee('Failed ops: 1')
             ->assertSee('30');
     }
 

@@ -9,35 +9,26 @@ use App\Models\Subreddit;
 class PostQualificationService
 {
     /**
-     * Qualify posts for comment collection.
+     * Qualify pending posts that meet both engagement thresholds.
      *
-     * Posts that previously failed qualification are re-evaluated because
-     * their score and comment count can change after later collections.
+     * Posts that do not meet both thresholds remain pending so they can be
+     * re-evaluated after later metric refreshes.
      *
      * @return int Number of posts newly qualified
      */
     public function qualify(Subreddit $subreddit): int
     {
-        $minScore = (int) config('reddit.qualification.min_score', 1);
-        $minComments = (int) config('reddit.qualification.min_comments', 1);
+        $minScore = (int) config('reddit.qualification.min_score', 5);
+        $minComments = (int) config('reddit.qualification.min_comments', 5);
 
-        $qualified = RedditPost::query()
+        return RedditPost::query()
             ->where('subreddit_id', $subreddit->getKey())
-            ->where('qualification_status', '!=', PostQualificationStatus::Qualified->value)
+            ->where('qualification_status', PostQualificationStatus::Pending->value)
             ->where('score', '>=', $minScore)
             ->where('num_comments', '>=', $minComments)
             ->update([
                 'qualification_status' => PostQualificationStatus::Qualified->value,
                 'qualified_at' => now(),
             ]);
-
-        RedditPost::query()
-            ->where('subreddit_id', $subreddit->getKey())
-            ->where('qualification_status', PostQualificationStatus::Pending->value)
-            ->update([
-                'qualification_status' => PostQualificationStatus::Rejected->value,
-            ]);
-
-        return $qualified;
     }
 }

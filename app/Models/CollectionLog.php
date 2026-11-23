@@ -14,6 +14,8 @@ class CollectionLog extends Model
 
     public const TYPE_REGULAR = 'regular';
 
+    public const TYPE_COMMENTS = 'comments';
+
     public const STATUS_RUNNING = 'running';
 
     public const STATUS_COMPLETED = 'completed';
@@ -33,7 +35,10 @@ class CollectionLog extends Model
         'posts_created',
         'posts_updated',
         'qualified_posts',
+        'pending_posts_checked',
+        'newly_qualified_posts',
         'comments_fetched',
+        'failed_operations',
         'error_message',
         'notes',
         'started_at',
@@ -52,7 +57,10 @@ class CollectionLog extends Model
             'posts_created' => 'integer',
             'posts_updated' => 'integer',
             'qualified_posts' => 'integer',
+            'pending_posts_checked' => 'integer',
+            'newly_qualified_posts' => 'integer',
             'comments_fetched' => 'integer',
+            'failed_operations' => 'integer',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];

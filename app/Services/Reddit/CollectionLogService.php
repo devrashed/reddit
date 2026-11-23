@@ -20,7 +20,7 @@ class CollectionLogService
     }
 
     /**
-     * @param  array{fetched?: int, created?: int, updated?: int, qualified?: int, comments?: int}  $counts
+     * @param  array{fetched?: int, created?: int, updated?: int, qualified?: int, pending_checked?: int, newly_qualified?: int, comments?: int, failed?: int}  $counts
      * @param  list<string>  $notes
      */
     public function complete(
@@ -35,8 +35,11 @@ class CollectionLogService
             'posts_fetched' => (int) ($counts['fetched'] ?? 0),
             'posts_created' => (int) ($counts['created'] ?? 0),
             'posts_updated' => (int) ($counts['updated'] ?? 0),
-            'qualified_posts' => (int) ($counts['qualified'] ?? 0),
+            'qualified_posts' => (int) ($counts['qualified'] ?? $counts['newly_qualified'] ?? 0),
+            'pending_posts_checked' => (int) ($counts['pending_checked'] ?? 0),
+            'newly_qualified_posts' => (int) ($counts['newly_qualified'] ?? 0),
             'comments_fetched' => (int) ($counts['comments'] ?? 0),
+            'failed_operations' => (int) ($counts['failed'] ?? 0),
             'notes' => $this->formatNotes($notes),
             'error_message' => $warning === null ? null : Str::limit($warning, 2000),
         ])->save();
@@ -45,7 +48,7 @@ class CollectionLogService
     }
 
     /**
-     * @param  array{fetched?: int, created?: int, updated?: int, qualified?: int, comments?: int}  $counts
+     * @param  array{fetched?: int, created?: int, updated?: int, qualified?: int, pending_checked?: int, newly_qualified?: int, comments?: int, failed?: int}  $counts
      * @param  list<string>  $notes
      */
     public function fail(
@@ -60,8 +63,11 @@ class CollectionLogService
             'posts_fetched' => (int) ($counts['fetched'] ?? 0),
             'posts_created' => (int) ($counts['created'] ?? 0),
             'posts_updated' => (int) ($counts['updated'] ?? 0),
-            'qualified_posts' => (int) ($counts['qualified'] ?? 0),
+            'qualified_posts' => (int) ($counts['qualified'] ?? $counts['newly_qualified'] ?? 0),
+            'pending_posts_checked' => (int) ($counts['pending_checked'] ?? 0),
+            'newly_qualified_posts' => (int) ($counts['newly_qualified'] ?? 0),
             'comments_fetched' => (int) ($counts['comments'] ?? 0),
+            'failed_operations' => max(1, (int) ($counts['failed'] ?? 1)),
             'error_message' => Str::limit($exception->getMessage(), 2000),
             'notes' => $this->formatNotes($notes),
         ])->save();

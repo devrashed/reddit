@@ -2,12 +2,12 @@
 
 namespace App\Services\Reddit;
 
-use App\Enums\CommentCollectionStatus;
 use App\Enums\PostQualificationStatus;
 use App\Enums\SubredditStatus;
 use App\Models\CollectionLog;
 use App\Models\RedditPost;
 use App\Models\Subreddit;
+use Carbon\CarbonInterface;
 use Throwable;
 
 class RegularCollectionService
@@ -16,7 +16,7 @@ class RegularCollectionService
         private readonly RedditApiClient $client,
         private readonly RedditPostSyncService $posts,
         private readonly PostQualificationService $qualification,
-        private readonly CommentCollectionService $comments,
+        private readonly QualifiedCommentDispatcher $commentDispatcher,
         private readonly CollectionLogService $logs
     ) {}
 
@@ -31,104 +31,153 @@ class RegularCollectionService
         }
 
         $log = $this->logs->start($subreddit, CollectionLog::TYPE_REGULAR);
+        $runStartedAt = now();
 
-        $counts = ['fetched' => 0, 'created' => 0, 'updated' => 0, 'qualified' => 0, 'comments' => 0];
+        $counts = [
+            'fetched' => 0,
+            'created' => 0,
+            'updated' => 0,
+            'qualified' => 0,
+            'pending_checked' => 0,
+            'newly_qualified' => 0,
+            'comments' => 0,
+            'failed' => 0,
+        ];
         $notes = [];
-        $commentErrors = [];
 
         try {
-            $limit = max(1, min(100, (int) config('reddit.listing_limit', 100)));
-            $maxPages = max(1, (int) config('reddit.regular_max_pages', 2));
-            $cursor = null;
-            $pages = 0;
+            $this->syncRecentPosts($subreddit, $counts, $notes);
 
-            while ($pages < $maxPages) {
-                $listing = $this->client->fetchSubredditListing($subreddit->name, $cursor, $limit);
-                $children = $listing['data']['children'];
+            $newlyQualified = $this->qualification->qualify($subreddit);
+            $counts['pending_checked'] = $this->recheckPendingPosts(
+                $subreddit,
+                $runStartedAt,
+                $counts,
+                $notes
+            );
 
-                if ($children === []) {
-                    break;
-                }
-
-                $result = $this->posts->sync($subreddit, $children);
-
-                $counts['fetched'] += $result['fetched'];
-                $counts['created'] += $result['inserted'];
-                $counts['updated'] += $result['updated'];
-                $pages++;
-
-                $after = $listing['data']['after'] ?? null;
-                $cursor = is_string($after) && $after !== '' ? $after : null;
-
-                if ($cursor === null) {
-                    break;
-                }
-            }
-
-            if ($pages >= $maxPages && $cursor !== null) {
-                $notes[] = "Stopped after the configured regular-collection page limit of {$maxPages}.";
-            }
-
-            $counts['qualified'] = $this->qualification->qualify($subreddit);
+            $newlyQualified += $this->qualification->qualify($subreddit);
+            $counts['qualified'] = $newlyQualified;
+            $counts['newly_qualified'] = $newlyQualified;
 
             $maxCommentPosts = max(0, (int) config('reddit.comments_max_posts_per_run', 10));
-            $maxAttempts = max(1, (int) config('reddit.comments_max_attempts', 3));
+            $queued = $this->commentDispatcher->dispatchFor($subreddit, $maxCommentPosts);
 
-            if ($maxCommentPosts > 0) {
-                $commentPosts = RedditPost::query()
-                    ->with('subreddit:id,name')
-                    ->select([
-                        'id',
-                        'subreddit_id',
-                        'reddit_id',
-                        'permalink',
-                        'score',
-                        'comments_collection_status',
-                        'comment_collection_attempts',
-                    ])
-                    ->where('subreddit_id', $subreddit->getKey())
-                    ->where('qualification_status', PostQualificationStatus::Qualified->value)
-                    ->whereIn('comments_collection_status', [
-                        CommentCollectionStatus::Pending->value,
-                        CommentCollectionStatus::Failed->value,
-                        CommentCollectionStatus::Running->value,
-                    ])
-                    ->where('comment_collection_attempts', '<', $maxAttempts)
-                    ->orderByDesc('score')
-                    ->orderBy('id')
-                    ->limit($maxCommentPosts)
-                    ->get();
-
-                foreach ($commentPosts as $post) {
-                    try {
-                        $result = $this->comments->collect($post);
-
-                        $counts['comments'] += $result['comments_fetched'];
-                        $notes = array_merge($notes, $result['notes']);
-                    } catch (Throwable $exception) {
-                        $message = "Comments for t3_{$post->reddit_id} failed: {$exception->getMessage()}";
-                        $commentErrors[] = $message;
-                        $notes[] = $message;
-                    }
-                }
-            }
-
-            if ($commentErrors !== []) {
-                $notes[] = 'Some comment collections failed and may be retried on a later run if attempts remain.';
+            if ($queued > 0) {
+                $notes[] = "Queued {$queued} comment collection job(s).";
             }
 
             $subreddit->forceFill(['last_collected_at' => now()])->save();
 
-            $this->logs->complete(
-                $log,
-                $counts,
-                $notes,
-                $commentErrors === [] ? null : implode("\n", $commentErrors)
-            );
+            $this->logs->complete($log, $counts, $notes);
         } catch (Throwable $exception) {
+            $counts['failed'] = 1;
+
             $this->logs->fail($log, $exception, $counts, $notes);
 
             throw $exception;
         }
+    }
+
+    /**
+     * @param  array<string, int>  $counts
+     * @param  list<string>  $notes
+     */
+    private function syncRecentPosts(Subreddit $subreddit, array &$counts, array &$notes): void
+    {
+        $limit = max(1, min(100, (int) config('reddit.listing_limit', 100)));
+        $maxPages = max(1, (int) config('reddit.regular_max_pages', 2));
+        $cursor = null;
+        $pages = 0;
+
+        while ($pages < $maxPages) {
+            $listing = $this->client->fetchSubredditListing($subreddit->name, $cursor, $limit);
+            $children = $listing['data']['children'];
+
+            if ($children === []) {
+                break;
+            }
+
+            $result = $this->posts->sync($subreddit, $children);
+
+            $counts['fetched'] += $result['fetched'];
+            $counts['created'] += $result['inserted'];
+            $counts['updated'] += $result['updated'];
+            $pages++;
+
+            $after = $listing['data']['after'] ?? null;
+            $cursor = is_string($after) && $after !== '' ? $after : null;
+
+            if ($cursor === null) {
+                break;
+            }
+        }
+
+        if ($pages >= $maxPages && $cursor !== null) {
+            $notes[] = "Stopped after the configured regular-collection page limit of {$maxPages}.";
+        }
+    }
+
+    /**
+     * Refresh metrics for a bounded batch of older pending posts.
+     *
+     * @param  array<string, int>  $counts
+     * @param  list<string>  $notes
+     */
+    private function recheckPendingPosts(
+        Subreddit $subreddit,
+        CarbonInterface $runStartedAt,
+        array &$counts,
+        array &$notes
+    ): int {
+        $maxPosts = max(0, (int) config('reddit.pending_recheck_max_posts', 300));
+
+        if ($maxPosts === 0) {
+            return 0;
+        }
+
+        $batchSize = max(1, min(100, (int) config('reddit.pending_recheck_batch_size', 100)));
+
+        $pendingPosts = RedditPost::query()
+            ->where('subreddit_id', $subreddit->getKey())
+            ->where('qualification_status', PostQualificationStatus::Pending->value)
+            ->where(function ($query) use ($runStartedAt): void {
+                $query->whereNull('last_fetched_at')
+                    ->orWhere('last_fetched_at', '<', $runStartedAt);
+            })
+            ->orderBy('pending_rechecked_at')
+            ->orderBy('id')
+            ->limit($maxPosts)
+            ->get(['id', 'reddit_id']);
+
+        $checked = 0;
+        $missing = 0;
+
+        foreach ($pendingPosts->chunk($batchSize) as $batch) {
+            $ids = $batch->pluck('id')->all();
+            $redditIds = $batch->pluck('reddit_id')->all();
+
+            $info = $this->client->fetchPostInfo($redditIds);
+            $children = $info['data']['children'];
+
+            $result = $this->posts->sync($subreddit, $children);
+
+            $counts['fetched'] += $result['fetched'];
+            $counts['created'] += $result['inserted'];
+            $counts['updated'] += $result['updated'];
+            $missing += max(0, count($ids) - $result['fetched']);
+
+            RedditPost::query()
+                ->whereIn('id', $ids)
+                ->update(['pending_rechecked_at' => now()]);
+
+            $checked += count($ids);
+        }
+
+        if ($missing > 0) {
+            $notes[] = "{$missing} pending post(s) were unavailable during metric refresh and remain pending.";
+        }
+
+        return $checked;
     }
 }

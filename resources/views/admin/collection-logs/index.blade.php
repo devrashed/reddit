@@ -24,6 +24,7 @@
                     <option value="">All types</option>
                     <option value="initial" @selected($filters['type'] === 'initial')>Initial</option>
                     <option value="regular" @selected($filters['type'] === 'regular')>Regular</option>
+                    <option value="comments" @selected($filters['type'] === 'comments')>Comments</option>
                 </select>
 
                 <select name="status" class="form-select form-select-sm" aria-label="Filter by collection status">
@@ -55,7 +56,7 @@
                             <th scope="col">Subreddit</th>
                             <th scope="col">Status</th>
                             <th scope="col">Posts</th>
-                            <th scope="col" class="text-end">Qualified</th>
+                            <th scope="col">Qualification</th>
                             <th scope="col" class="text-end">Comments</th>
                             <th scope="col">Notes / Errors</th>
                         </tr>
@@ -104,7 +105,13 @@
                                     <div class="text-success">New: {{ number_format($log->posts_created) }}</div>
                                     <div class="text-muted">Updated: {{ number_format($log->posts_updated) }}</div>
                                 </td>
-                                <td class="text-end">{{ number_format($log->qualified_posts) }}</td>
+                                <td class="small text-nowrap">
+                                    <div>Newly qualified: <strong>{{ number_format($log->newly_qualified_posts) }}</strong></div>
+                                    <div class="text-muted">Pending checked: {{ number_format($log->pending_posts_checked) }}</div>
+                                    <div class="{{ $log->failed_operations > 0 ? 'text-danger' : 'text-muted' }}">
+                                        Failed ops: {{ number_format($log->failed_operations) }}
+                                    </div>
+                                </td>
                                 <td class="text-end">{{ number_format($log->comments_fetched) }}</td>
                                 <td class="small {{ $log->error_message ? 'text-danger' : 'text-muted' }}">
                                     <span class="d-inline-block" style="max-width: 280px; white-space: normal;" title="{{ $summary }}">

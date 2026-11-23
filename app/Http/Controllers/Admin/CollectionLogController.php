@@ -16,7 +16,11 @@ class CollectionLogController extends Controller
     public function index(Request $request): View
     {
         $filters = $request->validate([
-            'type' => ['nullable', Rule::in([CollectionLog::TYPE_INITIAL, CollectionLog::TYPE_REGULAR])],
+            'type' => ['nullable', Rule::in([
+                CollectionLog::TYPE_INITIAL,
+                CollectionLog::TYPE_REGULAR,
+                CollectionLog::TYPE_COMMENTS,
+            ])],
             'status' => ['nullable', Rule::in([
                 CollectionLog::STATUS_RUNNING,
                 CollectionLog::STATUS_COMPLETED,

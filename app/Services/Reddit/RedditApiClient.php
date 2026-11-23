@@ -45,6 +45,42 @@ class RedditApiClient
     }
 
     /**
+     * Fetch fresh metrics for a batch of known Reddit posts.
+     *
+     * @param  list<string>  $redditIds
+     * @return array<string, mixed>
+     */
+    public function fetchPostInfo(array $redditIds): array
+    {
+        $ids = [];
+
+        foreach ($redditIds as $redditId) {
+            $redditId = trim((string) $redditId);
+
+            if ($redditId !== '') {
+                $ids[] = str_starts_with($redditId, 't3_') ? $redditId : 't3_'.$redditId;
+            }
+        }
+
+        $ids = array_values(array_unique($ids));
+
+        if ($ids === []) {
+            return ['kind' => 'Listing', 'data' => ['children' => []]];
+        }
+
+        $json = $this->request($this->baseUrl().'/api/info.json', [
+            'id' => implode(',', array_slice($ids, 0, 100)),
+            'raw_json' => 1,
+        ], 'post info');
+
+        if (! is_array($json['data']['children'] ?? null)) {
+            throw new RedditCollectionException('Reddit returned an unexpected post-info structure.');
+        }
+
+        return $json;
+    }
+
+    /**
      * Fetch the comments listing for a post.
      *
      * @return array<int, mixed>
