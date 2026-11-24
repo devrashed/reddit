@@ -87,7 +87,7 @@ class RedditPost extends Model
      */
     public function aiAnalyses(): HasMany
     {
-        return $this->hasMany(AiAnalysis::class);
+        return $this->hasMany(AiAnalysis::class, 'post_id');
     }
 
     /**
@@ -95,6 +95,14 @@ class RedditPost extends Model
      */
     public function painPoints(): HasMany
     {
-        return $this->hasMany(PainPoint::class);
+        return $this->hasMany(PainPoint::class, 'source_post_id');
+    }
+
+    /**
+     * @return HasMany<BusinessIdea, $this>
+     */
+    public function businessIdeas(): HasMany
+    {
+        return $this->hasMany(BusinessIdea::class, 'source_post_id');
     }
 }

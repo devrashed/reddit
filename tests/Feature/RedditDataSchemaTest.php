@@ -204,9 +204,10 @@ class RedditDataSchemaTest extends TestCase
         ]);
 
         AiAnalysis::query()->create([
-            'reddit_post_id' => $second->getKey(),
+            'post_id' => $second->getKey(),
             'analysis_type' => 'pain_point',
-            'status' => 'completed',
+            'analysis_status' => 'completed',
+            'version' => 1,
         ]);
 
         $loaded = Subreddit::query()
@@ -220,7 +221,7 @@ class RedditDataSchemaTest extends TestCase
 
         $aiPost = $loaded->posts->firstWhere('id', $second->getKey());
         $this->assertSame(CommentCollectionStatus::Pending, $aiPost->comments_collection_status);
-        $this->assertSame('completed', $aiPost->aiAnalyses->first()->status);
+        $this->assertSame('completed', $aiPost->aiAnalyses->first()->analysis_status);
     }
 
     public function test_foreign_key_constraints_remove_dependent_comments_and_ai_analyses(): void
@@ -236,15 +237,16 @@ class RedditDataSchemaTest extends TestCase
         ]);
 
         AiAnalysis::query()->create([
-            'reddit_post_id' => $post->getKey(),
+            'post_id' => $post->getKey(),
             'analysis_type' => 'pain_point',
-            'status' => 'pending',
+            'analysis_status' => 'pending',
+            'version' => 1,
         ]);
 
         $post->delete();
 
         $this->assertDatabaseMissing('reddit_comments', ['reddit_comment_id' => 'fk1']);
-        $this->assertDatabaseMissing('ai_analyses', ['reddit_post_id' => $post->getKey()]);
+        $this->assertDatabaseMissing('ai_analyses', ['post_id' => $post->getKey()]);
 
         $remainingPost = $this->createPost($subreddit, 'p2');
         $subreddit->delete();

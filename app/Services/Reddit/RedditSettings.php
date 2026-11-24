@@ -22,6 +22,8 @@ class RedditSettings
 
     public const KEY_HISTORICAL_MONTHS = 'reddit.historical_months';
 
+    public const KEY_TIMEZONE = 'reddit.timezone';
+
     /**
      * @var array<string, mixed>|null
      */
@@ -70,6 +72,15 @@ class RedditSettings
         return $times !== [] ? $times : $this->defaults()[self::KEY_TIMES];
     }
 
+    public function timezone(): string
+    {
+        $timezone = (string) $this->all()[self::KEY_TIMEZONE];
+
+        return in_array($timezone, timezone_identifiers_list(), true)
+            ? $timezone
+            : (string) config('app.timezone', 'UTC');
+    }
+
     public function httpTimeout(): int
     {
         return max(5, min(60, (int) $this->all()[self::KEY_HTTP_TIMEOUT]));
@@ -106,6 +117,7 @@ class RedditSettings
             self::KEY_HTTP_TIMEOUT => ['value' => (string) $data['http_timeout'], 'type' => 'integer'],
             self::KEY_RETRY_ATTEMPTS => ['value' => (string) $data['retry_attempts'], 'type' => 'integer'],
             self::KEY_HISTORICAL_MONTHS => ['value' => (string) $data['historical_months'], 'type' => 'integer'],
+            self::KEY_TIMEZONE => ['value' => $data['timezone'] ?? config('app.timezone', 'Asia/Dhaka'), 'type' => 'string'],
         ];
 
         DB::transaction(function () use ($rows): void {
@@ -134,6 +146,7 @@ class RedditSettings
             self::KEY_HTTP_TIMEOUT => (int) ($defaults['http_timeout'] ?? config('reddit.timeout', 10)),
             self::KEY_RETRY_ATTEMPTS => (int) ($defaults['retry_attempts'] ?? config('reddit.retry_attempts', 3)),
             self::KEY_HISTORICAL_MONTHS => (int) ($defaults['historical_months'] ?? 2),
+            self::KEY_TIMEZONE => (string) config('app.timezone', 'UTC'),
         ];
     }
 

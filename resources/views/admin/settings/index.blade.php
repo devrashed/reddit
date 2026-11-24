@@ -2,6 +2,11 @@
     $frequency = (int) old('regular_frequency', $values[\App\Services\Reddit\RedditSettings::KEY_FREQUENCY]);
     $times = old('times', $values[\App\Services\Reddit\RedditSettings::KEY_TIMES]);
     $times = array_pad(array_values((array) $times), 6, '');
+    $timezone = old('timezone', $values[\App\Services\Reddit\RedditSettings::KEY_TIMEZONE] ?? $timezone);
+    $aiModel = old('deepseek_model', $aiValues[\App\Services\Ai\AiSettings::KEY_MODEL]);
+    $aiTimeout = old('deepseek_timeout', $aiValues[\App\Services\Ai\AiSettings::KEY_TIMEOUT]);
+    $aiCommentsLimit = old('ai_comments_limit', $aiValues[\App\Services\Ai\AiSettings::KEY_COMMENTS_LIMIT]);
+    $aiContentLimit = old('ai_content_limit', $aiValues[\App\Services\Ai\AiSettings::KEY_CONTENT_LIMIT]);
 @endphp
 
 <x-layouts.admin title="Settings">
@@ -9,7 +14,7 @@
 
     <x-page-header
         title="Settings"
-        subtitle="Configure Reddit collection scheduling, request limits, and historical coverage."
+        subtitle="Configure Reddit collection, scheduling, and manual AI analysis."
     />
 
     <form method="POST" action="{{ route('admin.settings.update') }}">
@@ -63,7 +68,27 @@
                                 @enderror
                             </div>
 
-                            <div class="col-md-8">
+                            <div class="col-md-4">
+                                <label for="timezone" class="form-label fw-semibold">Collection timezone</label>
+                                <select id="timezone"
+                                        name="timezone"
+                                        class="form-select @error('timezone') is-invalid @enderror">
+                                    @foreach ($timezones as $zone)
+                                        <option value="{{ $zone }}" @selected($timezone === $zone)>{{ $zone }}</option>
+                                    @endforeach
+                                </select>
+                                @error('timezone')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Request delay</label>
+                                <input type="text" class="form-control" value="{{ config('reddit.request_delay_ms') }} ms" disabled>
+                                <div class="form-text">Configured by the server environment.</div>
+                            </div>
+
+                            <div class="col-12">
                                 <label class="form-label fw-semibold">Collection times ({{ $timezone }})</label>
                                 <div class="row g-2">
                                     @for ($index = 0; $index < 6; $index++)
@@ -149,6 +174,93 @@
                     </div>
                 </div>
 
+                <div class="card mt-4">
+                    <div class="card-heading">
+                        <div>
+                            <h2>AI analysis settings</h2>
+                            <small>Manual DeepSeek analysis; credentials stay in the server environment</small>
+                        </div>
+                        <span class="badge rounded-pill {{ $apiKeyConfigured ? 'badge-soft-success' : 'badge-soft-warning' }}">
+                            API key {{ $apiKeyConfigured ? 'configured' : 'not configured' }}
+                        </span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="deepseek_model" class="form-label fw-semibold">DeepSeek model</label>
+                                <select id="deepseek_model"
+                                        name="deepseek_model"
+                                        class="form-select @error('deepseek_model') is-invalid @enderror">
+                                    <option value="deepseek-chat" @selected($aiModel === 'deepseek-chat')>deepseek-chat</option>
+                                    <option value="deepseek-reasoner" @selected($aiModel === 'deepseek-reasoner')>deepseek-reasoner</option>
+                                </select>
+                                @error('deepseek_model')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="deepseek_timeout" class="form-label fw-semibold">DeepSeek timeout</label>
+                                <div class="input-group">
+                                    <input type="number"
+                                           id="deepseek_timeout"
+                                           name="deepseek_timeout"
+                                           min="10"
+                                           max="180"
+                                           value="{{ $aiTimeout }}"
+                                           class="form-control @error('deepseek_timeout') is-invalid @enderror">
+                                    <span class="input-group-text">seconds</span>
+                                    @error('deepseek_timeout')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="ai_comments_limit" class="form-label fw-semibold">Saved comments sent to AI</label>
+                                <input type="number"
+                                       id="ai_comments_limit"
+                                       name="ai_comments_limit"
+                                       min="0"
+                                       max="100"
+                                       value="{{ $aiCommentsLimit }}"
+                                       class="form-control @error('ai_comments_limit') is-invalid @enderror">
+                                @error('ai_comments_limit')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text">Highest-scoring saved comments only.</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="ai_content_limit" class="form-label fw-semibold">AI evidence character limit</label>
+                                <input type="number"
+                                       id="ai_content_limit"
+                                       name="ai_content_limit"
+                                       min="2000"
+                                       max="60000"
+                                       step="500"
+                                       value="{{ $aiContentLimit }}"
+                                       class="form-control @error('ai_content_limit') is-invalid @enderror">
+                                @error('ai_content_limit')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text">Bounds prompt size and token usage.</div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-light border mt-4 mb-0">
+                            <div class="d-flex gap-2">
+                                <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                                <div class="small">
+                                    The API key is read only from <code>DEEPSEEK_API_KEY</code> in the server
+                                    environment. It is never stored in the settings table or sent to the browser.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="d-flex flex-wrap gap-2 mt-4">
                     <button type="submit" class="btn btn-primary" data-submit-once>
                         <i class="bi bi-check2 me-1" aria-hidden="true"></i> Save settings
@@ -166,7 +278,7 @@
                     </div>
                     <div class="card-body">
                         <dl class="system-list row mb-0">
-                            <dt class="col-6">Timezone</dt>
+                            <dt class="col-6">Schedule timezone</dt>
                             <dd class="col-6 text-end">{{ $timezone }}</dd>
 
                             <dt class="col-6">Queue</dt>

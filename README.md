@@ -2,7 +2,8 @@
 
 A Reddit-powered business idea and pain point discovery tool. The application includes the Phase 1
 foundation, Phase 2 subreddit management, the Phase 3 collection engine, the Phase 4 canonical data
-model, and the Phase 5 qualification and comment automation workflow.
+model, the Phase 5 qualification automation, the Phase 6 Reddit Posts dashboard, the Phase 7
+manual DeepSeek analysis workflow, and the Phase 8 reporting, insight, and deployment completion.
 
 ## Stack
 
@@ -143,6 +144,78 @@ qualification and comment collection state. Collection logs distinguish initial,
 runs; regular logs record pending checks, newly qualified posts, and failed operations, while comment
 jobs record accessible comments fetched.
 
+## Reddit Posts Dashboard
+
+The admin Reddit Posts page provides:
+
+- Server-side search, subreddit, qualification, date, score, comment, and AI-status filters.
+- Server-side sorting by newest, oldest, highest score, most comments, and recently updated.
+- Paginated results that preserve active filters and sorting.
+- AJAX filter, search, sort, pagination, and refresh behavior with loading and error feedback.
+- A details page with escaped post content, metrics, workflow statuses, original Reddit link, and
+  threaded saved comments.
+- AI analysis state derived from the latest saved analysis record.
+- Analyze, View Analysis, Re-analyze, processing, and failed states backed by saved DeepSeek reports.
+
+Saved reports open from MySQL without another provider call. Re-analysis is explicitly confirmed and
+creates a new version.
+
+## DeepSeek AI Analysis
+
+AI analysis is strictly manual and on-demand. DeepSeek is called only after an administrator clicks
+Analyze on a specific Reddit post. Collection, comments, scheduling, dashboard loading, search, filters,
+sorting, pagination, and report viewing never call DeepSeek.
+
+Configuration in `.env`:
+
+```env
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_TIMEOUT=60
+DEEPSEEK_RETRY_ATTEMPTS=2
+```
+
+Without `DEEPSEEK_API_KEY`, the Analyze action returns a safe configuration error and makes no HTTP
+request.
+
+Workflow:
+
+- Analyze runs only when the button is clicked.
+- The prompt uses only the selected post and its saved MySQL comments.
+- First analysis creates version 1 with status `processing`, then `completed` or `failed`.
+- View Analysis loads the saved report from MySQL without another API call.
+- Re-analyze is a separate action, requires confirmation, and creates a new version.
+- Analyses store provider, model, token usage, status, timestamps, and the structured report.
+- API failures, invalid JSON, empty or incomplete reports are saved as failed versions and can be retried.
+- Per-post cache locks plus database status checks prevent duplicate concurrent requests.
+- API credentials remain server-side and are never included in JavaScript or HTML.
+
+Prompt safety rules:
+
+- No invented market size, revenue potential, willingness to pay, or demand statistics.
+- One Reddit post is not treated as proof of market demand.
+- Supported facts, AI interpretations, and hypotheses requiring validation are separated.
+- Post and comment content is treated as untrusted evidence, not instructions.
+
+The analysis request is synchronous so the administrator sees processing and completion states directly.
+Ensure PHP/web-server execution limits accommodate `DEEPSEEK_TIMEOUT` and the configured retry count.
+
+## Documentation
+
+Detailed guides live in [`docs/`](docs/):
+
+- [Installation](docs/INSTALLATION.md)
+- [Environment configuration](docs/ENVIRONMENT.md)
+- [Database setup](docs/DATABASE.md)
+- [Scheduler setup](docs/SCHEDULER.md)
+- [Queue setup](docs/QUEUE.md)
+- [Reddit collection](docs/REDDIT_COLLECTION.md)
+- [DeepSeek setup](docs/DEEPSEEK.md)
+- [Admin user guide](docs/ADMIN_GUIDE.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Production and shared-hosting deployment](docs/PRODUCTION_DEPLOYMENT.md)
+
 ## Administrator
 
 The administrator account is provisioned by `AdminUserSeeder` from the `ADMIN_NAME`, `ADMIN_EMAIL`, and
@@ -175,6 +248,8 @@ app/
   Jobs/                      Initial, regular, and per-post comment collection jobs
   Models/                    Eloquent models and relationships
   Services/Reddit/           HTTP client, collection, parsing, logging, settings
+  Services/Ai/               DeepSeek client, prompt builder, analysis workflow
+  Support/                   Analysis report schema
 config/
   reddit.php                 Reddit endpoints, limits, defaults, qualification thresholds
   navigation.php             Sidebar navigation configuration
@@ -211,7 +286,17 @@ Phase 5: strict dual-threshold qualification (`score >= 5` AND `num_comments >= 
 batched pending-post rechecks, deduplicated queued comment collection, per-post locks, separate comment
 logs, failed-operation tracking, and AI-free automation.
 
-Deferred: Dashboard, DeepSeek integration, pain point extraction, business idea generation, and scoring.
+Phase 6: Reddit Posts dashboard with server-side filters, sorting, pagination, AJAX list updates, post
+details, threaded comments, AI-status display, and Analyze controls.
+
+Phase 7: manual DeepSeek integration with structured 14-section reports, versioned analysis history,
+token tracking, Analyze/View Analysis/Re-analyze states, confirmation-gated re-analysis, duplicate-request
+protection, and safe error handling.
+
+Phase 8: AI Analysis report browser, pain point and business idea modules with evidence tracing,
+aggregate dashboard metrics, extended settings, reporting indexes, production documentation, and final QA.
+
+Deferred: external market validation, advanced forecasting/scoring dashboards, exports, and notifications.
 
 ## Collection Limitations
 

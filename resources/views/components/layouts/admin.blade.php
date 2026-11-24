@@ -33,6 +33,7 @@
     </div>
 
     <x-confirm-modal />
+    <x-reanalyze-modal />
     <x-loading />
     <x-toast-container />
 

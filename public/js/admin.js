@@ -366,6 +366,227 @@
 
     /*
      |--------------------------------------------------------------------------
+     | Reddit posts dashboard
+     |--------------------------------------------------------------------------
+     */
+    var postsFilterForm = document.getElementById("postsFilterForm");
+    var postsList = document.getElementById("postsList");
+    var postsLoading = document.getElementById("postsLoading");
+    var postsResultCount = document.getElementById("postsResultCount");
+    var postsListWrap = postsList ? postsList.closest(".posts-list-wrap") : null;
+    var postsSearchTimer = null;
+
+    var setPostsLoading = function (loading) {
+        if (postsLoading) {
+            postsLoading.classList.toggle("d-none", !loading);
+        }
+
+        if (postsListWrap) {
+            postsListWrap.classList.toggle("is-loading", loading);
+        }
+    };
+
+    var loadPosts = function (url, successMessage) {
+        if (!postsList) {
+            return;
+        }
+
+        postsList.setAttribute("aria-busy", "true");
+        setPostsLoading(true);
+
+        $.ajax({
+            url: url,
+            dataType: "json",
+            global: false,
+        })
+            .done(function (data) {
+                postsList.innerHTML = data.html;
+
+                if (postsResultCount) {
+                    postsResultCount.textContent = Number(data.count || 0).toLocaleString();
+                }
+
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState({}, "", url);
+                }
+
+                if (successMessage) {
+                    showToast(successMessage, "success");
+                }
+            })
+            .fail(function (xhr) {
+                showToast(ajaxErrorMessage(xhr, "Unable to load Reddit posts."), "danger");
+            })
+            .always(function () {
+                postsList.removeAttribute("aria-busy");
+                setPostsLoading(false);
+            });
+    };
+
+    if (postsFilterForm && postsList) {
+        $(document).on("submit", "#postsFilterForm", function (event) {
+            event.preventDefault();
+            clearTimeout(postsSearchTimer);
+
+            var form = this;
+            var params = new URLSearchParams(new FormData(form));
+
+            Array.from(params.keys()).forEach(function (key) {
+                if (params.get(key) === "") {
+                    params.delete(key);
+                }
+            });
+
+            var query = params.toString();
+            loadPosts(form.action + (query ? "?" + query : ""));
+        });
+
+        $(document).on("input", "[data-posts-search]", function () {
+            clearTimeout(postsSearchTimer);
+            postsSearchTimer = setTimeout(function () {
+                $("#postsFilterForm").trigger("submit");
+            }, 450);
+        });
+
+        $(document).on("change", "[data-posts-auto-submit]", function () {
+            clearTimeout(postsSearchTimer);
+            $("#postsFilterForm").trigger("submit");
+        });
+
+        $(document).on("click", "[data-posts-list] .pagination a", function (event) {
+            var href = $(this).attr("href");
+
+            if (!href) {
+                return;
+            }
+
+            event.preventDefault();
+            loadPosts(href);
+        });
+
+        $(document).on("click", "[data-posts-refresh]", function () {
+            loadPosts(window.location.href, "Post list refreshed.");
+        });
+    }
+
+    var reanalyzeModalElement = document.getElementById("reanalyzeConfirmModal");
+    var reanalyzeModal = reanalyzeModalElement && window.bootstrap
+        ? window.bootstrap.Modal.getOrCreateInstance(reanalyzeModalElement)
+        : null;
+    var reanalyzeTrigger = null;
+    var reanalyzeUrl = null;
+
+    var runAiAnalysis = function (button, url) {
+        if (!button || !url || button.prop("disabled")) {
+            return;
+        }
+
+        var originalHtml = button.html();
+        var aiButtons = $("[data-analyze-post], [data-reanalyze-post]");
+
+        aiButtons.prop("disabled", true);
+        button.html(
+            '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Analyzing...'
+        );
+
+        $.ajax({
+            url: url,
+            method: "POST",
+            data: { confirm: 1 },
+            dataType: "json",
+            global: false,
+            timeout: 180000,
+        })
+            .done(function (data) {
+                showToast("AI analysis completed.", "success");
+
+                if (data.analysis_url) {
+                    window.setTimeout(function () {
+                        window.location.assign(data.analysis_url);
+                    }, 400);
+
+                    return;
+                }
+
+                aiButtons.prop("disabled", false);
+                button.html(originalHtml);
+            })
+            .fail(function (xhr) {
+                showToast(ajaxErrorMessage(xhr, "AI analysis failed."), "danger");
+
+                if (xhr.responseJSON && xhr.responseJSON.analysis_url) {
+                    window.setTimeout(function () {
+                        window.location.assign(xhr.responseJSON.analysis_url);
+                    }, 700);
+
+                    return;
+                }
+
+                window.setTimeout(function () {
+                    window.location.reload();
+                }, 1300);
+            });
+    };
+
+    $(document).on("click", "[data-analyze-post]", function () {
+        runAiAnalysis($(this), String($(this).data("url") || ""));
+    });
+
+    $(document).on("click", "[data-reanalyze-post]", function (event) {
+        event.preventDefault();
+
+        var button = $(this);
+        var url = String(button.data("url") || "");
+
+        if (!url) {
+            return;
+        }
+
+        if (!reanalyzeModal) {
+            if (window.confirm("Call the AI provider again and create a new analysis version?")) {
+                runAiAnalysis(button, url);
+            }
+
+            return;
+        }
+
+        reanalyzeTrigger = button;
+        reanalyzeUrl = url;
+
+        var titleElement = reanalyzeModalElement.querySelector("[data-reanalyze-title]");
+
+        if (titleElement) {
+            titleElement.textContent = button.data("post-title")
+                ? "Post: " + button.data("post-title")
+                : "";
+        }
+
+        reanalyzeModal.show();
+    });
+
+    $(document).on("click", "[data-reanalyze-confirm]", function () {
+        if (!reanalyzeTrigger || !reanalyzeUrl) {
+            return;
+        }
+
+        var trigger = reanalyzeTrigger;
+        var url = reanalyzeUrl;
+
+        reanalyzeModal.hide();
+        runAiAnalysis(trigger, url);
+    });
+
+    if (reanalyzeModalElement) {
+        reanalyzeModalElement.addEventListener("hidden.bs.modal", function () {
+            if (!reanalyzeTrigger || !reanalyzeTrigger.prop("disabled")) {
+                reanalyzeTrigger = null;
+                reanalyzeUrl = null;
+            }
+        });
+    }
+
+    /*
+     |--------------------------------------------------------------------------
      | System status (AJAX)
      |--------------------------------------------------------------------------
      */

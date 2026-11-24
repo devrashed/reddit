@@ -17,10 +17,18 @@ class BusinessIdea extends Model
      */
     protected $fillable = [
         'pain_point_id',
+        'source_post_id',
+        'ai_analysis_id',
         'title',
         'description',
-        'target_audience',
+        'product_type',
+        'target_market',
         'proposed_solution',
+        'mvp_features',
+        'monetization_ideas',
+        'risks',
+        'evidence',
+        'is_ai_generated',
         'market_score',
         'feasibility_score',
         'overall_score',
@@ -35,6 +43,11 @@ class BusinessIdea extends Model
     protected function casts(): array
     {
         return [
+            'mvp_features' => 'array',
+            'monetization_ideas' => 'array',
+            'risks' => 'array',
+            'evidence' => 'array',
+            'is_ai_generated' => 'boolean',
             'market_score' => 'integer',
             'feasibility_score' => 'integer',
             'overall_score' => 'decimal:2',
@@ -47,5 +60,21 @@ class BusinessIdea extends Model
     public function painPoint(): BelongsTo
     {
         return $this->belongsTo(PainPoint::class);
+    }
+
+    /**
+     * @return BelongsTo<RedditPost, $this>
+     */
+    public function sourcePost(): BelongsTo
+    {
+        return $this->belongsTo(RedditPost::class, 'source_post_id');
+    }
+
+    /**
+     * @return BelongsTo<AiAnalysis, $this>
+     */
+    public function aiAnalysis(): BelongsTo
+    {
+        return $this->belongsTo(AiAnalysis::class, 'ai_analysis_id');
     }
 }

@@ -30,8 +30,14 @@ Route::middleware(['auth', 'admin'])
         Route::get('/', DashboardController::class)->name('dashboard');
 
         Route::get('reddit-posts', [RedditPostController::class, 'index'])->name('reddit-posts.index');
+        Route::get('reddit-posts/{redditPost}', [RedditPostController::class, 'show'])->name('reddit-posts.show');
+        Route::get('reddit-posts/{redditPost}/analysis', [RedditPostController::class, 'analysis'])->name('reddit-posts.analysis');
+        Route::post('reddit-posts/{redditPost}/analyze', [RedditPostController::class, 'analyze'])->name('reddit-posts.analyze');
+        Route::post('reddit-posts/{redditPost}/reanalyze', [RedditPostController::class, 'reanalyze'])->name('reddit-posts.reanalyze');
         Route::get('pain-points', [PainPointController::class, 'index'])->name('pain-points.index');
+        Route::get('pain-points/{painPoint}', [PainPointController::class, 'show'])->name('pain-points.show');
         Route::get('business-ideas', [BusinessIdeaController::class, 'index'])->name('business-ideas.index');
+        Route::get('business-ideas/{businessIdea}', [BusinessIdeaController::class, 'show'])->name('business-ideas.show');
 
         Route::get('subreddits', [SubredditController::class, 'index'])->name('subreddits.index');
         Route::get('subreddits/create', [SubredditController::class, 'create'])->name('subreddits.create');

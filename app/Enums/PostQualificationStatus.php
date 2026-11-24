@@ -14,4 +14,12 @@ enum PostQualificationStatus: string
             self::Qualified => 'Qualified',
         };
     }
+
+    public function badgeClass(): string
+    {
+        return match ($this) {
+            self::Pending => 'badge-soft-warning',
+            self::Qualified => 'badge-soft-success',
+        };
+    }
 }

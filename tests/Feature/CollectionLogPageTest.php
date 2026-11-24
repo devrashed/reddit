@@ -42,6 +42,8 @@ class CollectionLogPageTest extends TestCase
             ->assertSee('Initial')
             ->assertSee('Completed')
             ->assertSee('Pending checked: 12')
+            ->assertSee('End:')
+            ->assertSee('Duration:')
             ->assertSee('Failed ops: 1')
             ->assertSee('30');
     }

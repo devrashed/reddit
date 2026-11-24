@@ -17,9 +17,15 @@ class PainPoint extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'reddit_post_id',
+        'source_post_id',
+        'ai_analysis_id',
         'title',
         'description',
+        'root_cause',
+        'severity',
+        'target_audience',
+        'evidence',
+        'is_ai_generated',
         'category',
         'sentiment',
         'mention_count',
@@ -35,6 +41,8 @@ class PainPoint extends Model
     protected function casts(): array
     {
         return [
+            'evidence' => 'array',
+            'is_ai_generated' => 'boolean',
             'mention_count' => 'integer',
             'confidence_score' => 'decimal:4',
         ];
@@ -43,9 +51,17 @@ class PainPoint extends Model
     /**
      * @return BelongsTo<RedditPost, $this>
      */
-    public function redditPost(): BelongsTo
+    public function sourcePost(): BelongsTo
     {
-        return $this->belongsTo(RedditPost::class);
+        return $this->belongsTo(RedditPost::class, 'source_post_id');
+    }
+
+    /**
+     * @return BelongsTo<AiAnalysis, $this>
+     */
+    public function aiAnalysis(): BelongsTo
+    {
+        return $this->belongsTo(AiAnalysis::class, 'ai_analysis_id');
     }
 
     /**

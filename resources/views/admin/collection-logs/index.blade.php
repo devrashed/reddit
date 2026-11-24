@@ -52,7 +52,7 @@
                 <table class="table admin-table collection-log-table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th scope="col">Started</th>
+                            <th scope="col">Timing</th>
                             <th scope="col">Subreddit</th>
                             <th scope="col">Status</th>
                             <th scope="col">Posts</th>
@@ -75,8 +75,9 @@
 
                             <tr>
                                 <td class="small text-muted text-nowrap">
-                                    <div>{{ $log->started_at?->format('d M Y, H:i:s') ?? '—' }}</div>
-                                    <div>{{ $durationLabel }}</div>
+                                    <div>Start: {{ $log->started_at?->format('d M Y, H:i:s') ?? '—' }}</div>
+                                    <div>End: {{ $log->finished_at?->format('d M Y, H:i:s') ?? '—' }}</div>
+                                    <div>Duration: {{ $durationLabel }}</div>
                                 </td>
                                 <td>
                                     @if ($log->subreddit)

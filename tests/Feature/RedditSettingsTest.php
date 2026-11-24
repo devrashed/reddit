@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Ai\AiSettings;
 use App\Services\Reddit\RedditSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithAdmins;
@@ -39,6 +40,11 @@ class RedditSettingsTest extends TestCase
                 'http_timeout' => 20,
                 'retry_attempts' => 4,
                 'historical_months' => 3,
+                'timezone' => 'Asia/Kolkata',
+                'deepseek_model' => 'deepseek-reasoner',
+                'deepseek_timeout' => 90,
+                'ai_comments_limit' => 25,
+                'ai_content_limit' => 18000,
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
@@ -51,6 +57,13 @@ class RedditSettingsTest extends TestCase
         $this->assertSame(20, $settings->httpTimeout());
         $this->assertSame(4, $settings->retryAttempts());
         $this->assertSame(3, $settings->historicalMonths());
+        $this->assertSame('Asia/Kolkata', $settings->timezone());
+
+        $aiSettings = app(AiSettings::class);
+        $this->assertSame('deepseek-reasoner', $aiSettings->model());
+        $this->assertSame(90, $aiSettings->timeout());
+        $this->assertSame(25, $aiSettings->commentsLimit());
+        $this->assertSame(18000, $aiSettings->contentLimit());
 
         $this->assertDatabaseHas('settings', [
             'key' => RedditSettings::KEY_TIMES,
@@ -70,6 +83,11 @@ class RedditSettingsTest extends TestCase
             'http_timeout' => 10,
             'retry_attempts' => 3,
             'historical_months' => 2,
+            'timezone' => 'Asia/Dhaka',
+            'deepseek_model' => 'deepseek-chat',
+            'deepseek_timeout' => 60,
+            'ai_comments_limit' => 40,
+            'ai_content_limit' => 24000,
         ])->assertSessionHasNoErrors();
 
         $this->assertFalse(app(RedditSettings::class)->regularEnabled());
@@ -88,6 +106,11 @@ class RedditSettingsTest extends TestCase
                 'http_timeout' => 10,
                 'retry_attempts' => 3,
                 'historical_months' => 2,
+                'timezone' => 'Asia/Dhaka',
+                'deepseek_model' => 'deepseek-chat',
+                'deepseek_timeout' => 60,
+                'ai_comments_limit' => 40,
+                'ai_content_limit' => 24000,
             ])
             ->assertRedirect(route('admin.settings.index'))
             ->assertSessionHasErrors('times');
@@ -106,6 +129,11 @@ class RedditSettingsTest extends TestCase
                 'http_timeout' => 10,
                 'retry_attempts' => 3,
                 'historical_months' => 2,
+                'timezone' => 'Asia/Dhaka',
+                'deepseek_model' => 'deepseek-chat',
+                'deepseek_timeout' => 60,
+                'ai_comments_limit' => 40,
+                'ai_content_limit' => 24000,
             ])
             ->assertRedirect(route('admin.settings.index'))
             ->assertSessionHasErrors('times.0');
@@ -125,9 +153,28 @@ class RedditSettingsTest extends TestCase
                 'http_timeout' => 10,
                 'retry_attempts' => 3,
                 'historical_months' => 2,
+                'timezone' => 'Asia/Dhaka',
+                'deepseek_model' => 'deepseek-chat',
+                'deepseek_timeout' => 60,
+                'ai_comments_limit' => 40,
+                'ai_content_limit' => 24000,
             ])
             ->assertForbidden();
 
         $this->assertDatabaseCount('settings', 0);
+    }
+
+    public function test_ai_api_key_is_never_stored_in_settings_or_rendered(): void
+    {
+        config()->set('deepseek.api_key', 'super-secret-test-key');
+        $admin = $this->adminUser();
+
+        $this->actingAs($admin)
+            ->get(route('admin.settings.index'))
+            ->assertOk()
+            ->assertSee('API key configured')
+            ->assertDontSee('super-secret-test-key');
+
+        $this->assertDatabaseMissing('settings', ['key' => 'deepseek.api_key']);
     }
 }

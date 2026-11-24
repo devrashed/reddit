@@ -22,7 +22,7 @@ class AdminAreaTest extends TestCase
         $admin = $this->adminUser();
 
         $pages = [
-            '/admin' => 'Business discovery overview',
+            '/admin' => 'Application overview',
             '/admin/reddit-posts' => 'Reddit Posts',
             '/admin/pain-points' => 'Pain Points',
             '/admin/business-ideas' => 'Business Ideas',

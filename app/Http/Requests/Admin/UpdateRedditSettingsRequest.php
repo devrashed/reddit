@@ -45,6 +45,11 @@ class UpdateRedditSettingsRequest extends FormRequest
             'http_timeout' => ['required', 'integer', 'between:5,60'],
             'retry_attempts' => ['required', 'integer', 'between:1,5'],
             'historical_months' => ['required', 'integer', 'between:1,12'],
+            'timezone' => ['required', 'timezone'],
+            'deepseek_model' => ['required', 'string', 'in:deepseek-chat,deepseek-reasoner'],
+            'deepseek_timeout' => ['required', 'integer', 'between:10,180'],
+            'ai_comments_limit' => ['required', 'integer', 'between:0,100'],
+            'ai_content_limit' => ['required', 'integer', 'between:2000,60000'],
         ];
     }
 
